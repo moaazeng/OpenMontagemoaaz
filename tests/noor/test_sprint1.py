@@ -157,7 +157,8 @@ def test_dsp_config_rejects_nan_inf_and_out_of_range():
 
 def test_mushaf_verify_rejects_unverified_verse():
     """Sacred-text integrity: canonical verses resolve; invented text returns None."""
-    from lib.noor.mushaf_store import MushafStore, VerseRef
+    from lib.noor.mushaf_store import MushafStore
+    from lib.noor.schemas import VerseRef
 
     store = MushafStore()
     # Canonical al-Fatihah opening (Uthmani) resolves to surah 1, ayah 1.
@@ -170,16 +171,16 @@ def test_mushaf_verify_rejects_unverified_verse():
     assert store.verify("this is not a real Quranic verse") is None
     assert store.verify("بِسْمِ λ렴 란") is None
 
-    # Out-of-range ayah returns None.
-    assert store.lookup(2, 255) is None
+    # Out-of-range ayah returns None (surah 2 has 286 ayahs; 287 is beyond).
+    assert store.lookup(2, 287) is None
 
 
 # ── Test 4: NoorStore preset CRUD + XP (+150 per export) ────────────────────
 
-@pytest.mark.asyncio
 def test_noor_store_preset_crud_and_xp():
     """NoorStore async SQLite WAL: preset CRUD, .noorpreset round-trip, XP."""
     from lib.noor.storage import NoorStore, Preset
+
 
     fd, path = tempfile.mkstemp(suffix=".noor.db")
     os.close(fd)
@@ -228,6 +229,7 @@ def test_noor_store_preset_crud_and_xp():
         assert after.xp == before.xp + 150
         assert after.exports_count == before.exports_count + 1
     finally:
+        asyncio.run(store.close())
         Path(path).unlink(missing_ok=True)
 
 
