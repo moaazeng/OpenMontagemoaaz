@@ -1,0 +1,42 @@
+# --- Audio I/O & "Golden Order" DSP (<15ms WASAPI/ASIO) ---
+sounddevice>=0.5.1
+soundfile>=0.12.1
+pedalboard>=0.9.16
+scipy>=1.14.0
+numba>=0.60.0
+pyloudnorm>=0.1.1
+
+# --- Video Decode, ModernGL Shaders & Portrait Vision ---
+av>=13.1.0
+moderngl>=5.11.0
+opencv-python-headless>=4.10.0
+numpy>=1.26.4,<2.2
+
+# --- Uthmani Arabic Shaping (Windows-Safe, No Missing libraqm DLLs) ---
+uharfbuzz>=0.42.0
+skia-python>=87.6
+python-bidi>=0.6.0
+
+# --- AI Speech, Quran Alignment & Depth Bokeh (RTX CUDA Accelerated) ---
+deepfilternet>=0.5.6
+faster-whisper>=1.1.0
+rapidfuzz>=3.10.0
+mediapipe>=0.10.18
+transformers>=4.46.0
+accelerate>=1.1.0
+
+# --- Storage, API Daemon & PySide6 Desktop Workstation ---
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+sqlalchemy>=2.0.36
+aiosqlite>=0.20.0
+alembic>=1.14.0
+PySide6>=6.8.0
+qasync>=0.27.1
+
+# --- Testing & Verification ---
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+pytest-qt>=4.4.0
+ruff>=0.8.0
+mypy>=1.13.0
