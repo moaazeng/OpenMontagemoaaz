@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "openmontage/artifacts/noor_project",
+  "title": "Noor Project",
+  "description": "Noor project file artifact (.noorproj).",
+  "type": "object",
+  "required": ["name", "version"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "const": "1.0" },
+    "dsp_config": { "$ref": "openmontage/artifacts/noor_dsp_config" },
+    "preset": { "$ref": "openmontage/artifacts/noor_preset" },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "openmontage/artifacts/noor_preset",
+  "title": "Noor Preset",
+  "description": "A user-storable Noor DSP preset (.noorpreset round-trippable).",
+  "type": "object",
+  "required": ["name", "dsp_config"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "dsp_config": { "$ref": "openmontage/artifacts/noor_dsp_config" },
+    "lut_style": { "type": "string" },
+    "aspect_ratio": { "type": "string" },
+    "official": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

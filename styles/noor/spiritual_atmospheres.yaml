@@ -1,0 +1,67 @@
+identity:
+  name: "Noor Spiritual Atmospheres"
+  category: cinematic
+  mood: sakina, jalal, rajaa, tahajjud
+  pace: slow
+  best_for: "Tahajjud content, Ramadan reminders, dua videos, spiritual reflection"
+
+visual_language:
+  color_palette:
+    primary: ["#064E3B", "#7C3AED"]
+    accent: ["#FCD34D", "#FBBF24"]
+    background: "#022C22"
+    text: "#ECFDF5"
+    muted: "#6EE7B7"
+  composition: rule-of-thirds, focal calligraphy off-center, deep shadows
+  texture: deep night-sky gradient, subtle stars, candle-flicker particle
+
+typography:
+  headings:
+    font: "Amiri"
+    weight: 700
+    tracking: "0.06em"
+  body:
+    font: "Amiri"
+    weight: 400
+    line_height: 2.0
+  code:
+    font: "JetBrains Mono"
+    weight: 400
+  stat_card:
+    font: "Amiri"
+    weight: 700
+    size_multiplier: 2.0
+  scale_system: "major_third"
+  weight_matrix:
+    title: 700
+    heading: 600
+    body: 400
+    caption: 300
+
+motion:
+  transitions: [dissolve, fade]
+  animation_style: "slow, breathing pulse, reverent"
+  pacing_rules:
+    min_scene_hold_seconds: 6.0
+    max_scene_hold_seconds: 20.0
+    text_card_hold_seconds: 8.0
+    stat_card_hold_seconds: 7.0
+    transition_duration_seconds: 1.2
+  entrance: "fade-up, very slow, breathing scale"
+  exit: "fade-out, very slow"
+
+audio:
+  voice_style: "whispered recitation, intimate, tahajjud tone, clear tajweed"
+  music_mood: "deep ambient, rain soft, no percussion, spacious"
+  music_volume: 0.06
+  sfx_style: "soft rain, distant birds (fajr), candle flicker"
+  ducking_threshold_db: -8
+
+asset_generation:
+  image_prompt_prefix: "tahajjud night scene, mosque courtyard under stars, soft lantern light, spiritual, "
+  image_negative_prompt: "bright daylight, neon, faces of prophets, idols, dancing, cluttered, low quality"
+  diagram_style: "minimal crescent, star geometry, soft glow"
+  consistency_anchors:
+    - "Deep emerald (#064E3B) and night-blue (#022C22) as base"
+    - "Lantern/candle light sources only"
+    - "Breathing-pulse motion, no hard cuts"

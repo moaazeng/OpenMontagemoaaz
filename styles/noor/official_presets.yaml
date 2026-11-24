@@ -1,0 +1,67 @@
+identity:
+  name: "Noor Official Studio Presets"
+  category: cinematic
+  mood: spiritual, reverent, majestic
+  pace: deliberate
+  best_for: "Quranic cinematic content, mosque atmosphere, spiritual storytelling"
+
+visual_language:
+  color_palette:
+    primary: ["#1E3A8A", "#7C3AED"]
+    accent: ["#F59E0B", "#EF4444"]
+    background: "#0F172A"
+    text: "#F8FAFC"
+    muted: "#64748B"
+  composition: centered, symmetrical framing, generous negative space around calligraphy
+  texture: subtle parchment, soft light leaks, no harsh noise
+
+typography:
+  headings:
+    font: "Amiri"
+    weight: 700
+    tracking: "0.04em"
+  body:
+    font: "Amiri"
+    weight: 400
+    line_height: 1.8
+  code:
+    font: "JetBrains Mono"
+    weight: 400
+  stat_card:
+    font: "Amiri"
+    weight: 700
+    size_multiplier: 2.5
+  scale_system: "major_third"
+  weight_matrix:
+    title: 800
+    heading: 700
+    body: 400
+    caption: 300
+
+motion:
+  transitions: [fade, dissolve, soft-wipe]
+  animation_style: "ease-in-out, slow, reverent, no bounce"
+  pacing_rules:
+    min_scene_hold_seconds: 4.0
+    max_scene_hold_seconds: 15.0
+    text_card_hold_seconds: 6.0
+    stat_card_hold_seconds: 5.0
+    transition_duration_seconds: 0.8
+  entrance: "fade-up with slight scale (0.9 -> 1.0), slow"
+  exit: "fade-out, slow"
+
+audio:
+  voice_style: "reciter-style, clear tajweed, deliberate pace, warm and reverent"
+  music_mood: "spiritual ambient, soft oud, no percussion unless viral tier"
+  music_volume: 0.10
+  sfx_style: "soft breeze, distant adhan echo on scene changes"
+  ducking_threshold_db: -6
+
+asset_generation:
+  image_prompt_prefix: "quranic cinematic, mosque architecture, soft golden hour light, spiritual atmosphere, high detail, "
+  image_negative_prompt: "photorealistic faces of prophets, idols, dancing figures, bright neon, cluttered, low quality, cartoon"
+  diagram_style: "clean geometric, arabic arches, subtle shadows"
+  consistency_anchors:
+    - "Emerald (#10B981) and gold (#F59E0B) as spiritual accent colors"
+    - "Uthmani calligraphy centered, haram-style framing"
+    - "Soft vignette on all scenes"

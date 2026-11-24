@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "openmontage/artifacts/noor_dsp_config",
+  "title": "Noor DSP Config",
+  "description": "Golden Order DSP configuration artifact (FR-04). All numeric params bounded; NaN/Inf prohibited.",
+  "type": "object",
+  "required": ["version", "preamp_gain", "eq_bands", "lut_intensity", "deep_bass_mix"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "preamp_gain": { "type": "number", "minimum": 0.0, "maximum": 4.0 },
+    "eq_bands": {
+      "type": "array",
+      "items": { "type": "number", "minimum": -12.0, "maximum": 12.0 },
+      "minItems": 6,
+      "maxItems": 6
+    },
+    "lut_intensity": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "deep_bass_mix": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+    "capcut_noise_mode": {
+      "type": "string",
+      "enum": ["off", "standard", "pro_clean", "extreme"]
+    },
+    "capcut_deep_bass_mode": {
+      "type": "string",
+      "enum": ["off", "warm", "capcut_pro", "kadyrov_elite"]
+    },
+    "mobile_mic_calibration": {
+      "type": "string",
+      "enum": ["studio_neumann", "broadcast_shure", "smooth_warm", "raw_calibrated"]
+    },
+    "mosque_acoustic_space": {
+      "type": "string",
+      "enum": ["haram_makkah", "prophet_madina", "alaqsa", "pro_studio", "dome_hall"]
+    },
+    "lut_style": {
+      "type": "string",
+      "enum": ["kadyrov_gold", "royal_dark", "makkah_sunrise", "madina_emerald", "dawn_spiritual", "vintage_film", "pure_mushaf", "dramatic_monochrome"]
+    },
+    "true_peak_db_tp": { "type": "number", "maximum": -1.0 }
+  },
+  "additionalProperties": false
+}
