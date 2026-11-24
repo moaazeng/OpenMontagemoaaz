@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 # ── Enums (member values pinned verbatim from the spec) ─────────────────────
@@ -112,7 +112,7 @@ class OfficialStudioPresets(str, Enum):
 class DSPConfig(BaseModel):
     """Golden Order DSP configuration — FR-04 parameters, all bounded."""
 
-    preamp_gain: float = Field(default=1.0, ge=0.0, le=4.0)
+    preamp_gain: float = Field(default=1.0, ge=0.5, le=4.0)
     eq_band_1_gain_db: float = Field(default=0.0, ge=-12.0, le=12.0)
     eq_band_2_gain_db: float = Field(default=0.0, ge=-12.0, le=12.0)
     eq_band_3_gain_db: float = Field(default=0.0, ge=-12.0, le=12.0)
@@ -162,6 +162,23 @@ class VerseRef:
     translation: Optional[str] = None
 
 
+def _reject_non_finite(v: Any) -> Any:
+    """Reject NaN/Inf (and any container holding them) so JSON can never emit null."""
+    if isinstance(v, float):
+        if not math.isfinite(v):
+            raise ValueError(f"must be finite, got {v!r}")
+        return v
+    if isinstance(v, dict):
+        for kk, vv in v.items():
+            _reject_non_finite(vv)
+        return v
+    if isinstance(v, (list, tuple)):
+        for item in v:
+            _reject_non_finite(item)
+        return v
+    return v
+
+
 class DSPAnalysis(BaseModel):
     """Momentary analysis output of the Golden Order DSP chain."""
 
@@ -172,6 +189,28 @@ class DSPAnalysis(BaseModel):
     fft_bins: list[float]
     sample_rate: int = 48000
 
+    @field_validator(
+        "lufs_momentary",
+        "lufs_integrated",
+        "true_peak_db_tp",
+        "clarity_ratio",
+        mode="before",
+    )
+    @classmethod
+    def _require_finite_scalar(cls, v: Any) -> Any:
+        if isinstance(v, float) and not math.isfinite(v):
+            raise ValueError(f"must be finite, got {v!r}")
+        return v
+
+    @field_validator("fft_bins", mode="before")
+    @classmethod
+    def _require_finite_bins(cls, v: Any) -> Any:
+        if isinstance(v, list):
+            for item in v:
+                if isinstance(item, float) and not math.isfinite(item):
+                    raise ValueError(f"fft_bins must be finite, got {v!r}")
+        return v
+
 
 class Preset(BaseModel):
     """A user-storable DSP preset (.noorpreset round-trippable)."""
@@ -180,6 +219,12 @@ class Preset(BaseModel):
     dsp_config: dict[str, Any] = Field(default_factory=dict)
     lut_style: str = LUTStyle.kadyrov_gold.value
     aspect_ratio: str = AspectRatio.r_9_16.value
+
+    @field_validator("dsp_config", mode="before")
+    @classmethod
+    def _dsp_config_no_nan(cls, v: Any) -> Any:
+        _reject_non_finite(v)
+        return v
 
 
 class NoorProject(BaseModel):
@@ -190,3 +235,9 @@ class NoorProject(BaseModel):
     dsp_config: DSPConfig = Field(default_factory=DSPConfig)
     preset: Optional[Preset] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("metadata", mode="before")
+    @classmethod
+    def _metadata_no_nan(cls, v: Any) -> Any:
+        _reject_non_finite(v)
+        return v

@@ -47,9 +47,11 @@ def test_eq_bands_affect_fft_bins():
     from lib.noor.schemas import DSPConfig
 
     dsp = GoldenOrderDSP(sample_rate=SAMPLE_RATE)
-    # 1 kHz tone — should land in band 3 region (approx 500-2k Hz).
+    # 1 kHz tone at -26 dBFS so the compressor (-20 dB threshold) and
+    # brickwall limiter (-1.0 dBTP ceiling) stay transparent; EQ's tonal
+    # effect is then directly measurable at the output.
     t = np.arange(SAMPLE_RATE, dtype=np.float32) / SAMPLE_RATE
-    tone = np.sin(2 * np.pi * 1000 * t).astype(np.float32)
+    tone = (0.05 * np.sin(2 * np.pi * 1000 * t)).astype(np.float32)
 
     def _fft_peak_db(samples: np.ndarray, freq: float) -> float:
         window = samples * np.hanning(len(samples))
@@ -59,12 +61,12 @@ def test_eq_bands_affect_fft_bins():
         mag = spectrum[idx] / (len(samples) / 2)
         return 20 * np.log10(mag + 1e-12)
 
-    base = _fft_peak_db(tone, 1000.0)
+    flat = _fft_peak_db(dsp.process(tone, DSPConfig()), 1000.0)
     boosted = _fft_peak_db(dsp.process(tone, DSPConfig(eq_band_3_gain_db=+12.0)), 1000.0)
     cut = _fft_peak_db(dsp.process(tone, DSPConfig(eq_band_3_gain_db=-12.0)), 1000.0)
 
-    assert boosted > base + 3.0, f"+12 dB EQ did not boost 1 kHz ({base:.1f} -> {boosted:.1f})"
-    assert cut < base - 3.0, f"-12 dB EQ did not cut 1 kHz ({base:.1f} -> {cut:.1f})"
+    assert boosted > flat + 3.0, f"+12 dB EQ did not boost 1 kHz ({flat:.1f} -> {boosted:.1f})"
+    assert cut < flat - 3.0, f"-12 dB EQ did not cut 1 kHz ({flat:.1f} -> {cut:.1f})"
 
 
 def test_hpf_and_notch_remove_low_frequencies():
