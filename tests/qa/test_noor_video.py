@@ -72,7 +72,7 @@ def test_gl_renderer_split_modes_and_luts():
 
     renderer = GLRenderer()
     frame = np.full((720, 1280, 3), 40, dtype=np.uint8)
-    for mode in (SplitMode.ORIGINAL, SplitMode.FILTERED, SplitMode.SIDE_BY_SIDE, SplitMode.FILTERED):
+    for mode in (SplitMode.original, SplitMode.filtered, SplitMode.side_by_side, SplitMode.filtered):
         out = renderer.render_frame(
             frame,
             split=0.5,
@@ -148,7 +148,7 @@ def test_noor_video_fx_base_tool(tmp_path):
 
     tool = NoorVideoFX()
     assert tool.capability == "video_processing"
-    assert tool.runtime.value in ("LOCAL_GPU", "LOCAL")
+    assert tool.runtime.value in ("local_gpu", "local")
 
 
 @pytest.mark.skipif(
@@ -161,7 +161,7 @@ def test_uthmani_overlay_base_tool(tmp_path):
 
     tool = UthmaniOverlay()
     assert tool.capability == "graphics"
-    assert tool.runtime.value in ("LOCAL_GPU", "LOCAL")
+    assert tool.runtime.value in ("local_gpu", "local")
 
 
 def test_noor_video_suite_is_runnable():
