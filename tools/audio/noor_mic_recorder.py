@@ -1,41 +1,30 @@
 """Noor Mic Recorder tool — real 48 kHz WASAPI microphone capture.
 
-Wraps lib/noor/recorder.py (sounddevice WASAPI callback) as an OpenMontage
-BaseTool. Records mono float32 at 48000 Hz, blocksize 512 (~10.67 ms),
-commits a WAV on stop. Warns if the default input is Bluetooth Hands-Free
-(16 kHz mono, high latency) which violates the 48 kHz monitor contract.
+Delegates capture to lib/noor/recorder.py (NoorRecorder: sounddevice WASAPI
+callback, float32 mono, profiles NEUMANN/HARAM/DEEP_BASS/RAW) and exposes it
+as an OpenMontage BaseTool. Records mono float32 at 48000 Hz, blocksize 512
+(~10.67 ms monitor latency target), commits a WAV on stop. Warns if the
+default input is Bluetooth Hands-Free (16 kHz mono, high latency) which
+violates the 48 kHz monitor contract.
 """
 
 from __future__ import annotations
 
+import threading
 import time
 from pathlib import Path
 from typing import Any
 
-import sounddevice as sd
-
+from lib.noor.recorder import DEFAULT_SAMPLE_RATE, DEFAULT_BLOCKSIZE, NoorRecorder
 from tools.base_tool import (
     BaseTool,
     Determinism,
     ExecutionMode,
-    ResourceProfile,
     ToolResult,
     ToolRuntime,
     ToolStability,
     ToolTier,
 )
-
-# repo root: tools/audio/noor_mic_recorder.py -> parents[2]
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-_DEFAULT_SAMPLE_RATE = 48000
-_DEFAULT_BLOCKSIZE = 512  # ~10.67 ms monitor latency target
-
-
-def np_concat(chunks):
-    import numpy as np
-
-    return np.concatenate(chunks, axis=0)
 
 
 class NoorMicRecorder(BaseTool):
@@ -68,8 +57,14 @@ class NoorMicRecorder(BaseTool):
                 "default": None,
                 "description": "sounddevice device index/name or None for default",
             },
-            "sample_rate": {"type": "integer", "default": _DEFAULT_SAMPLE_RATE, "minimum": 8000},
-            "blocksize": {"type": "integer", "default": _DEFAULT_BLOCKSIZE},
+            "sample_rate": {"type": "integer", "default": DEFAULT_SAMPLE_RATE, "minimum": 8000},
+            "blocksize": {"type": "integer", "default": DEFAULT_BLOCKSIZE},
+            "profile": {
+                "type": "string",
+                "enum": ["NEUMANN", "HARAM", "DEEP_BASS", "RAW"],
+                "default": "RAW",
+                "description": "Mic profile coloration applied on commit",
+            },
             "duration_seconds": {
                 "type": "number",
                 "default": None,
@@ -87,6 +82,7 @@ class NoorMicRecorder(BaseTool):
             "duration_seconds": {"type": "number"},
             "channels": {"type": "integer"},
             "device_name": {"type": "string"},
+            "profile": {"type": "string"},
             "bluetooth_handsfree_warning": {"type": "string"},
         },
     }
@@ -96,81 +92,87 @@ class NoorMicRecorder(BaseTool):
         start = time.perf_counter()
         output_path = Path(inputs["output_path"])
         device = inputs.get("device")
-        sample_rate = int(inputs.get("sample_rate", _DEFAULT_SAMPLE_RATE))
-        blocksize = int(inputs.get("blocksize", _DEFAULT_BLOCKSIZE))
+        sample_rate = int(inputs.get("sample_rate", DEFAULT_SAMPLE_RATE))
+        blocksize = int(inputs.get("blocksize", DEFAULT_BLOCKSIZE))
+        profile = str(inputs.get("profile", "RAW"))
         duration_seconds = inputs.get("duration_seconds")
 
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        recorder = NoorRecorder()
 
         # Validate device supports the requested sample rate; warn on BT HF.
         warning = None
         try:
-            dev_info = sd.query_devices(device) if device is not None else sd.query_devices(kind="input")
-            dev_name = str(dev_info.get("name", "unknown"))
+            dev_info = (
+                recorder.default_device() if device is None
+                else _device_by_index(recorder, device)
+            )
+            dev_name = dev_info.get("name", "unknown")
             dev_sr = float(dev_info.get("default_samplerate", sample_rate))
-            if dev_name.lower().find("hands-free") != -1 or dev_name.lower().find("hfp") != -1:
+            if recorder.is_bluetooth_handsfree(dev_name):
                 warning = (
                     f"Bluetooth Hands-Free device '{dev_name}' detected "
                     f"(~16 kHz, high latency); 48 kHz monitor contract not met"
                 )
             if abs(dev_sr - sample_rate) > 1 and device is None:
-                # default device rate differs; sounddevice will still resample in-callback
-                warning = (warning or "") + f" default device rate {dev_sr} Hz != requested {sample_rate} Hz"
+                warning = (warning or "") + (
+                    f" default device rate {dev_sr} Hz != requested {sample_rate} Hz"
+                )
         except Exception as exc:  # pragma: no cover - hardware dependent
             warning = f"could not query device info: {exc}"
 
-        recorded: list = []
-        stop = False
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        stopped = threading.Event()
 
-        def callback(indata, frames, time_info, status):
-            nonlocal stop
-            if status:  # pragma: no cover - runtime overflow
-                pass  # status surfaced via sd.CallbackFlags; non-fatal
-            recorded.append(indata.copy())
-            if duration_seconds is not None and len(recorded) * blocksize / sample_rate >= duration_seconds:
-                stop = True
-                raise sd.CallbackStop
+        def on_audio(indata):
+            # Auto-stop after duration_seconds.
+            if duration_seconds is not None and recorder._start_time is not None:
+                if time.time() - recorder._start_time >= duration_seconds:
+                    stopped.set()
 
-        try:
-            with sd.InputStream(
-                samplerate=sample_rate,
-                blocksize=blocksize,
-                device=device,
-                channels=1,
-                dtype="float32",
-                callback=callback,
-            ):
-                while not stop:
-                    sd.sleep(100)
-        except sd.CallbackStop:
-            pass  # clean auto-stop
-        except Exception as exc:  # pragma: no cover - hardware dependent
-            return ToolResult(
-                success=False,
-                error=f"recording failed: {exc}",
-                duration_seconds=round(time.perf_counter() - start, 4),
-            )
+        recorder.start(
+            device=device,
+            profile=profile,
+            sample_rate=sample_rate,
+            blocksize=blocksize,
+            on_audio=on_audio,
+        )
 
-        if not recorded:
+        # Poll until recorder stops itself (duration) — but duration is
+        # advisory here; callers typically stop via a separate stop() call.
+        # For the BaseTool single-call contract we capture for duration or
+        # until a short timeout. Hardware capture is bounded by duration_seconds
+        # when provided; otherwise capture a short buffer and stop.
+        max_wait = duration_seconds if duration_seconds is not None else 2.0
+        deadline = time.time() + max_wait
+        while time.time() < deadline and recorder.recording and not stopped.is_set():
+            time.sleep(0.05)
+
+        wav_path = recorder.stop()
+        if wav_path is None:
             return ToolResult(
                 success=False,
                 error="no audio captured",
                 duration_seconds=round(time.perf_counter() - start, 4),
             )
 
-        audio = np_concat(recorded)
-        duration = len(audio) / sample_rate
+        # Move committed temp WAV to the requested output path.
+        import shutil
 
-        import soundfile as sf  # imported here so hardware-less envs still import this module
+        shutil.move(str(wav_path), str(output_path))
 
         try:
-            sf.write(output_path, audio, sample_rate, subtype="PCM_16")
-        except Exception as exc:  # pragma: no cover - writer dependent
-            return ToolResult(
-                success=False,
-                error=f"failed to write WAV: {exc}",
-                duration_seconds=round(time.perf_counter() - start, 4),
-            )
+            import soundfile as sf
+
+            info = sf.info(str(output_path))
+            duration = info.frames / info.samplerate
+            channels = info.channels
+        except Exception:  # pragma: no cover
+            duration = 0.0
+            channels = 1
+
+        dev_name = (
+            recorder.default_device().get("name", "unknown") if device is None else str(device)
+        )
 
         return ToolResult(
             success=True,
@@ -178,8 +180,9 @@ class NoorMicRecorder(BaseTool):
                 "output": str(output_path),
                 "sample_rate": sample_rate,
                 "duration_seconds": round(duration, 4),
-                "channels": 1,
-                "device_name": (sd.query_devices(device).get("name") if device is not None else sd.query_devices(kind="input").get("name")),
+                "channels": channels,
+                "device_name": dev_name,
+                "profile": profile,
                 "bluetooth_handsfree_warning": warning,
             },
             artifacts=[str(output_path)],
@@ -188,7 +191,14 @@ class NoorMicRecorder(BaseTool):
         )
 
 
-def np_concat(chunks):
-    import numpy as np
+def _device_by_index(recorder: NoorRecorder, device) -> dict:
+    import sounddevice as sd
 
-    return np.concatenate(chunks, axis=0)
+    dev = sd.query_devices(device)
+    return {
+        "name": str(dev.get("name", "unknown")),
+        "default_samplerate": float(dev.get("default_samplerate", 0)),
+        "max_input_channels": int(dev.get("max_input_channels", 0)),
+    }
+
+

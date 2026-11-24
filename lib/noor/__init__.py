@@ -26,6 +26,7 @@ from .schemas import (
 )
 from .mushaf_store import MushafStore
 from .storage import NoorStore
+from .recorder import NoorRecorder, DEFAULT_SAMPLE_RATE, DEFAULT_BLOCKSIZE
 
 __all__ = [
     "LUTStyle",
@@ -46,4 +47,5 @@ __all__ = [
     "VerseRef",
     "MushafStore",
     "NoorStore",
+    "NoorRecorder",
 ]
